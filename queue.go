@@ -1,12 +1,13 @@
-package main
+package fentry
 
 import (
 	"fmt"
 	"os"
+	"path"
 )
 
 type fileQueueNode struct {
-	value os.FileInfo
+	value string
 	next  *fileQueueNode
 	prev  *fileQueueNode
 }
@@ -16,7 +17,7 @@ type FileQueue struct {
 	tail *fileQueueNode
 }
 
-func (fq *FileQueue) Enqueue(s os.FileInfo) {
+func (fq *FileQueue) Enqueue(s string) {
 	if fq.head == nil {
 		fq.head = &fileQueueNode{
 			value: s,
@@ -32,15 +33,15 @@ func (fq *FileQueue) Enqueue(s os.FileInfo) {
 	fq.tail = n
 }
 
-func (fq *FileQueue) EnqueueAll(ss []os.FileInfo) {
+func (fq *FileQueue) EnqueueAll(baseDir string, ss []os.FileInfo) {
 	for _, s := range ss {
-		fq.Enqueue(s)
+		fq.Enqueue(path.Join(baseDir, s.Name()))
 	}
 }
 
-func (fq *FileQueue) Dequeue() (os.FileInfo, error) {
+func (fq *FileQueue) Dequeue() (string, error) {
 	if fq.head == nil {
-		return nil, fmt.Errorf("queue has no item to dequeue")
+		return "", fmt.Errorf("queue has no item to dequeue")
 	}
 	toReturn := fq.head.value
 	next := fq.head.next

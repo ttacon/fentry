@@ -1,56 +1,35 @@
-package main
+package fentry
 
 import (
-	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
 var (
-	recursiveMode = false
-	duration      time.Duration
+	RecursiveMode = false
+	Duration      time.Duration
 )
 
-type syncAlteredFiles struct {
-	*sync.RWMutex
-	files []string
-}
-
-type Notifier struct {
-	data *syncAlteredFiles
-	dur  time.Duration
-}
-
-type dirWatcher struct {
-	changes chan<- []string
-	dir     string
-}
-
 func GetChangedFiles(dir string) []string {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		panic(err)
-	}
-	fileQueue := &FileQueue{}
-	fileQueue.EnqueueAll(files)
 	var changedFiles []string
-	for !fileQueue.IsEmpty() {
-		file, err := fileQueue.Dequeue()
+	f := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			panic(err)
+			return err
 		}
-		if file.IsDir() && recursiveMode && !strings.HasPrefix(file.Name(), ".") {
-			dirFiles, err := ioutil.ReadDir(file.Name())
-			if err != nil {
-				panic(err)
-			}
-			fileQueue.EnqueueAll(dirFiles)
-		} else {
-			if file.ModTime().After(time.Now().Add(-1 * duration)) {
-				changedFiles = append(changedFiles, file.Name())
-			}
+		if info.IsDir() && !RecursiveMode {
+			return filepath.SkipDir
 		}
+		if info.IsDir() && strings.HasPrefix(filepath.Base(path), ".") {
+			return filepath.SkipDir
+		}
+
+		if !info.IsDir() && info.ModTime().After(time.Now().Add(Duration*-1)) {
+			changedFiles = append(changedFiles, path)
+		}
+		return nil
 	}
+	filepath.Walk(dir, f)
 	return changedFiles
 }
