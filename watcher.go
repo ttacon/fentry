@@ -21,7 +21,8 @@ func GetChangedFiles(dir string) []string {
 		if info.IsDir() && !RecursiveMode {
 			return filepath.SkipDir
 		}
-		if info.IsDir() && strings.HasPrefix(filepath.Base(path), ".") {
+
+		if strings.HasPrefix(filepath.Base(path), ".") {
 			return filepath.SkipDir
 		}
 
